@@ -1,19 +1,38 @@
-from flask import render_template, url_for, flash, redirect, request, abort, make_response
+from flask import render_template, url_for, flash, redirect, request, abort, make_response, render_template_string, session, Response
 from flaskpage import app, db
 from flaskpage.forms import RegistrationForm, LoginForm, PostForm
 from flaskpage.models import User, Post
 from flask_login import login_user, current_user, logout_user, login_required
+from flask_table import Table, Col
+from flask_admin import Admin
+from flask_admin.contrib.sqla import ModelView
+from flask_principal import Principal, Permission, RoleNeed
 
-# def setcookie():
-# 	response=make_response("Cookie Inserted")
-# 	response.set_cookie('course', 'web_pentesting')
-# 	return response
+principals = Principal(app)
+admin_permission = Permission(RoleNeed('admin'))
+
+admin = Admin(app, name='Flask Blog', template_mode='bootstrap3')
+admin.add_view(ModelView(User, db.session))
+admin.add_view(ModelView(Post, db.session))
+
+@app.route("/admin")
+@admin_permission.require()
+def admin():
+    return Response('Only accessible by admin')
+
 
 @app.route("/")
 @app.route("/home")
 def home():
 	posts = Post.query.all()
 	return render_template('home.html', posts=posts)
+
+@app.route('/query')
+def query():
+    person = {'name':"", 'secret':"secret_string9812309841"}
+    if request.args.get('name'):
+        person['name'] = request.args.get('name')
+    return render_template('query.html', person=person)
 
 @app.route("/about")
 def about():
@@ -28,7 +47,7 @@ def register():
 		user = User(username=form.username.data, password=form.password.data, email=form.email.data)
 		db.session.add(user)
 		db.session.commit()
-		flash(f'Your account has been created!', 'success')
+		flash('Your account has been created!', 'success')
 		return redirect(url_for('login'))
 	return render_template('register.html', title='Register', form=form)
 
@@ -100,3 +119,29 @@ def delete_post(post_id):
     db.session.commit()
     flash('Your post has been deleted!', 'success')
     return redirect(url_for('home'))
+
+@app.route("/database")
+@login_required
+def show_database():
+    class UserTable(Table):
+        id = Col('ID')
+        username = Col('Username')
+        email = Col('Email')
+        image_file = Col('Image File')
+        password = Col('Password')
+        posts = Col('Posts')
+    users = User.query.all()
+    user_table = UserTable(users)
+
+    class PostTable(Table):
+        id = Col('ID')
+        title = Col('Title')
+        date_posted = Col('Date Posted')
+        content = Col('Content')
+        user_id = Col('User ID')
+    posts = Post.query.all()
+    post_table = PostTable(posts)
+
+    return render_template('database.html', user_table=user_table, post_table=post_table)
+
+
