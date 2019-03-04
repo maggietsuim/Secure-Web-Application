@@ -63,7 +63,7 @@ def login():
 		if user and (form.password.data == user.password):
 			login_user(user, remember=form.remember.data)
 			session.permanent = True
-			app.permanent_session_lifetime = timedelta(seconds=30)
+			app.permanent_session_lifetime = timedelta(days=form.session_length.data)
 			return redirect(url_for('home'))
 		else:
 			flash('Login Unsuccessful. Please check email and password', 'danger')
