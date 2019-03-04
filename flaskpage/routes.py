@@ -7,6 +7,8 @@ from flask_table import Table, Col
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 from flask_principal import Principal, Permission, RoleNeed
+import datetime
+from datetime import timedelta
 
 principals = Principal(app)
 admin_permission = Permission(RoleNeed('admin'))
@@ -18,7 +20,7 @@ admin.add_view(ModelView(Post, db.session))
 @app.route("/admin")
 @admin_permission.require()
 def admin():
-    return Response('Only accessible by admin')
+	return Response('Only accessible by admin')
 
 
 @app.route("/")
@@ -29,14 +31,14 @@ def home():
 
 @app.route('/query')
 def query():
-    person = {'name':"", 'secret':"secret_string9812309841"}
-    if request.args.get('name'):
-        person['name'] = request.args.get('name')
-    return render_template('query.html', person=person)
+	person = {'name':"", 'secret':"secret_string9812309841"}
+	if request.args.get('name'):
+		person['name'] = request.args.get('name')
+	return render_template('query.html', person=person)
 
 @app.route("/about")
 def about():
-    return render_template('about.html', title='About')
+	return render_template('about.html', title='About')
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
@@ -60,6 +62,8 @@ def login():
 		user = User.query.filter_by(email=form.email.data).first()
 		if user and (form.password.data == user.password):
 			login_user(user, remember=form.remember.data)
+			session.permanent = True
+			app.permanent_session_lifetime = timedelta(seconds=30)
 			return redirect(url_for('home'))
 		else:
 			flash('Login Unsuccessful. Please check email and password', 'danger')
@@ -68,80 +72,55 @@ def login():
 @app.route("/logout")
 def logout():
 	logout_user()
+	session.pop('email', None)
 	return redirect(url_for('home'))
 
 @app.route("/post/new", methods=['GET', 'POST'])
 @login_required
 def new_post():
-    form = PostForm()
-    if form.validate_on_submit():
-        post = Post(title=form.title.data, content=form.content.data, author=current_user)
-        db.session.add(post)
-        db.session.commit()
-        flash('Your post has been created!', 'success')
-        return redirect(url_for('home'))
-    return render_template('create_post.html', title='New Post',
-                           form=form, legend='New Post')
+	form = PostForm()
+	if form.validate_on_submit():
+		post = Post(title=form.title.data, content=form.content.data, author=current_user)
+		db.session.add(post)
+		db.session.commit()
+		flash('Your post has been created!', 'success')
+		return redirect(url_for('home'))
+	return render_template('create_post.html', title='New Post',
+						   form=form, legend='New Post')
 
 @app.route("/post/<int:post_id>")
 def post(post_id):
-    post = Post.query.get_or_404(post_id)
-    return render_template('post.html', title=post.title, post=post)
+	post = Post.query.get_or_404(post_id)
+	return render_template('post.html', title=post.title, post=post)
 
 
 @app.route("/post/<int:post_id>/update", methods=['GET', 'POST'])
 @login_required
 def update_post(post_id):
-    post = Post.query.get_or_404(post_id)
-    if post.author != current_user:
-        abort(403)
-    form = PostForm()
-    if form.validate_on_submit():
-        post.title = form.title.data
-        post.content = form.content.data
-        db.session.commit()
-        flash('Your post has been updated!', 'success')
-        return redirect(url_for('post', post_id=post.id))
-    elif request.method == 'GET':
-        form.title.data = post.title
-        form.content.data = post.content
-    return render_template('create_post.html', title='Update Post',
-                           form=form, legend='Update Post')
+	post = Post.query.get_or_404(post_id)
+	if post.author != current_user:
+		abort(403)
+	form = PostForm()
+	if form.validate_on_submit():
+		post.title = form.title.data
+		post.content = form.content.data
+		db.session.commit()
+		flash('Your post has been updated!', 'success')
+		return redirect(url_for('post', post_id=post.id))
+	elif request.method == 'GET':
+		form.title.data = post.title
+		form.content.data = post.content
+	return render_template('create_post.html', title='Update Post',
+						   form=form, legend='Update Post')
 
 
 @app.route("/post/<int:post_id>/delete", methods=['POST'])
 @login_required
 def delete_post(post_id):
-    post = Post.query.get_or_404(post_id)
-    if post.author != current_user:
-        abort(403)
-    db.session.delete(post)
-    db.session.commit()
-    flash('Your post has been deleted!', 'success')
-    return redirect(url_for('home'))
-
-@app.route("/database")
-@login_required
-def show_database():
-    class UserTable(Table):
-        id = Col('ID')
-        username = Col('Username')
-        email = Col('Email')
-        image_file = Col('Image File')
-        password = Col('Password')
-        posts = Col('Posts')
-    users = User.query.all()
-    user_table = UserTable(users)
-
-    class PostTable(Table):
-        id = Col('ID')
-        title = Col('Title')
-        date_posted = Col('Date Posted')
-        content = Col('Content')
-        user_id = Col('User ID')
-    posts = Post.query.all()
-    post_table = PostTable(posts)
-
-    return render_template('database.html', user_table=user_table, post_table=post_table)
-
-
+	post = Post.query.get_or_404(post_id)
+	if post.author != current_user:
+		abort(403)
+	db.session.delete(post)
+	db.session.commit()
+	flash('Your post has been deleted!', 'success')
+	return redirect(url_for('home'))
