@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, BooleanField, TextAreaField, IntegerField
-from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError
+from wtforms import StringField, PasswordField, SubmitField, BooleanField, TextAreaField, IntegerField, validators, DecimalField
+from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError, NumberRange
 from flaskpage.models import User
 
 class RegistrationForm(FlaskForm):
@@ -28,7 +28,7 @@ class LoginForm(FlaskForm):
 	email = StringField('Email', validators=[DataRequired(), Email()])
 	password = PasswordField('Password', validators=[DataRequired()])
 	remember = BooleanField('Remember Me')
-	session_length = IntegerField('Session Length')
+	session_length = IntegerField('Session Length', validators=[NumberRange(min=1, max=30)])
 	submit = SubmitField('Log In')
 
 class PostForm(FlaskForm):
